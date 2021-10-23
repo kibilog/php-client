@@ -1,5 +1,5 @@
 {
-  "name": "kibilog/php_client_simple",
+  "name": "kibilog/php-client",
   "description": "An independent client for Kibilog.com, running on native code.",
   "keywords": [
     "log",
