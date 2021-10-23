@@ -1,0 +1,30 @@
+{
+  "name": "kibilog/php_client_simple",
+  "description": "An independent client for Kibilog.com, running on native code.",
+  "keywords": [
+    "log",
+    "logging",
+    "kibilog",
+    "monolog"
+  ],
+  "homepage": "https://kibilog.com",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Kibilog\\SimpleClient\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Evgeny Chereshnev",
+      "email": "info@kibilog.com",
+      "homepage": "https://kibilog.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.1"
+  },
+  "require-dev": {
+    "symfony/var-dumper": "^5.3"
+  }
+}
