@@ -6,19 +6,30 @@ require $_SERVER['DOCUMENT_ROOT'].'/vendor/autoload.php';
 use Kibilog\SimpleClient\Fallback;
 use Kibilog\SimpleClient\HttpClient;
 use Kibilog\SimpleClient\Message\Monolog;
+use Kibilog\SimpleClient\Response\Response;
 
 $sUserToken = '01fdeleozya3fwa1nwy9b2w034';
 $oClient = new HttpClient($sUserToken);
 
-$oMessage = (new Monolog('01fjqbwk1heyv50z99hkg7m6ky'))
-    ->setMessage('E-mail was not sent!')
-    ->setLevel(Monolog::LEVEL_ERROR)
+$oMessage = (new Monolog('01fjqbwk1heyv50z99hkg7m6ky', 'E-mail was not sent!'))
+    ->setLevel(Monolog::LEVEL_ALERT)
     ->setParams(
         [
             'recipient' => 'example@example.com',
             'body' => 'Your account is running out of money.'
         ]
     );
+$oClient->addMessage($oMessage);
+
+$oMessage = (new Monolog('01fjqbwk1heyv50z99hkg7m6ky', 'E-mail was not sent!'))
+    ->setLevel(Monolog::LEVEL_ALERT)
+    ->setParams(
+        [
+            'recipient' => 'example@example.com',
+            'body' => 'Thank you for registering!'
+        ]
+    );
+$oClient->addMessage($oMessage);
 
 
 /**
@@ -33,28 +44,6 @@ $oMessage = (new Monolog('01fjqbwk1heyv50z99hkg7m6ky'))
  */
 $oClient->setFallback(function (Fallback $fallback)
     {
-        /**
-         * Kibilog\SimpleClient\Fallback {
-         *   -response: Kibilog\SimpleClient\Response {
-         *     -iStatusCode: 520
-         *     -aBody: null
-         *     -isSuccess: false
-         *     -sError: "Can't open stream."
-         *   }
-         *   -message: Kibilog\SimpleClient\Message\Monolog {
-         *     -__logUuid: "01fjqbwk1heyv50z99hkg7m6ky"
-         *     -createdAt: 1635028408
-         *     -message: "E-mail was not sent!"
-         *     -level: "ERROR"
-         *     -params: array:2 [
-         *       "recipient" => "example@example.com"
-         *       "body" => "Your account is running out of money."
-         *     ]
-         *     -group: null
-         *   }
-         * }
-         */
-
         file_put_contents(
             $_SERVER['DOCUMENT_ROOT'].'/kibilog_error.log',
             '[ '.$fallback->getResponse()
@@ -66,18 +55,21 @@ $oClient->setFallback(function (Fallback $fallback)
         /**
          * Saved to a file
          */
-        $sSerialize = serialize($fallback->getMessage());
+        $sSerialize = serialize($fallback->getMessages());
         file_put_contents(
             $_SERVER['DOCUMENT_ROOT'].'/kibilog_messages/'.time().'_'.sha1($sSerialize).'.txt',
             $sSerialize
         );
     });
 
-$oResponse = $oClient->sendImmediately($oMessage);
-if ($oResponse->isSuccess()) {
-    print_r($oResponse->getBody());
-} else {
-    print_r($oResponse->getError());
+$oResponseCollection = $oClient->sendMessages();
+if (!$oResponseCollection->isSuccess()) {
+    foreach ($oResponseCollection->getResponses() as $oResponse) {
+        /** @var Response $oResponse */
+        if (!$oResponse->isSuccess()) {
+            echo $oResponse->getError().PHP_EOL;
+        }
+    }
 }
 
 
@@ -93,10 +85,14 @@ $oClient = new HttpClient($sUserToken);
 
 $aMessages = glob($_SERVER['DOCUMENT_ROOT'].'/kibilog_messages/*');
 foreach ($aMessages as &$sFilepath) {
-    $oMessage = unserialize(file_get_contents($sFilepath));
-    $oResponse = $oClient->sendImmediately($oMessage);
+    $oMessages = unserialize(file_get_contents($sFilepath));
+    foreach ($oMessages as &$oMessage) {
+        $oClient->addMessage($oMessage);
+    }
+    $oResponse = $oClient->sendMessages();
     if ($oResponse->isSuccess()) {
         unlink($sFilepath);
     }
+    unset($oMessage);
 }
 unset($sFilepath);

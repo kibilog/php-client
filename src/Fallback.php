@@ -2,14 +2,14 @@
 
 namespace Kibilog\SimpleClient;
 
-use Kibilog\SimpleClient\Message\IMessage;
+use Kibilog\SimpleClient\Response\Response;
 
 class Fallback
 {
     /** @var Response $response */
     private $response;
-    /** @var IMessage */
-    private $message;
+    /** @var iterable */
+    private $messages;
 
     /**
      * @return Response|null
@@ -28,18 +28,18 @@ class Fallback
     }
 
     /**
-     * @return IMessage
+     * @return iterable
      */
-    public function getMessage(): IMessage
+    public function getMessages(): iterable
     {
-        return $this->message;
+        return $this->messages;
     }
 
     /**
-     * @param IMessage $message
+     * @param iterable $messages
      */
-    public function setMessage(IMessage $message): void
+    public function setMessages(iterable $messages): void
     {
-        $this->message = $message;
+        $this->messages = $messages;
     }
 }

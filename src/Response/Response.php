@@ -1,17 +1,17 @@
 <?php
 
-namespace Kibilog\SimpleClient;
+namespace Kibilog\SimpleClient\Response;
 
 class Response
 {
     /** @var int $iStatusCode */
-    private $iStatusCode = 520;
+    private $iStatusCode = null;
 
     /** @var array $aBody */
     private $aBody = null;
 
     /** @var bool $isSuccess */
-    private $isSuccess = false;
+    private $isSuccess = true;
 
     /** @var string $sError */
     private $sError;

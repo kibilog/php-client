@@ -1,6 +1,6 @@
 <?php
 
-namespace Kibilog\SimpleClient;
+namespace Kibilog\SimpleClient\Assistent;
 
 use InvalidArgumentException;
 

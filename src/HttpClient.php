@@ -9,6 +9,11 @@ use Kibilog\SimpleClient\Exception\KibilogException;
 use Kibilog\SimpleClient\Exception\StreamException;
 use Kibilog\SimpleClient\Exception\TimeoutException;
 use Kibilog\SimpleClient\Message\IMessage;
+use Kibilog\SimpleClient\Message\Monolog;
+use Kibilog\SimpleClient\Response\Response;
+use Kibilog\SimpleClient\Response\ResponseCollection;
+
+use function json_encode;
 
 class HttpClient
 {
@@ -19,6 +24,8 @@ class HttpClient
     private $iHttpTimeout = 2;
     /** @var Closure $fallbackFunc */
     private $fallbackFunc;
+    /** @var array $aMessages */
+    private $aMessages = [];
 
     /** @var string $sUrl */
     private $sUrl = 'https://kibilog.com/api/v1/log/';
@@ -60,53 +67,28 @@ class HttpClient
      */
     public function sendImmediately(IMessage $message): Response
     {
-        $oResponse = new Response();
-
-        try {
-            $context = stream_context_create(
-                [
-                    'http' => [
-                        'method' => 'POST',
-                        'header' => [
-                            'Content-Type: application/json',
-                            'apiToken: '.$this->sUserToken
-                        ],
-                        'timeout' => $this->iHttpTimeout,
-                        'content' => json_encode($message->extractData(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                        'ignore_errors' => true
-                    ]
-                ]
-            );
-
-            $stream = fopen(
-                $this->sUrl.'monolog/single/'.$message->getLogUuid(),
-                'r',
-                false,
-                $context
-            );
-
-            $this->processResponse($stream, $oResponse);
-            $oResponse->setIsSuccess(true);
-
-            return $oResponse;
-        } catch (KibilogException $e) {
-            $oResponse->setIsSuccess(false);
-            $oResponse->setError($e->getMessage());
-        }
-        finally {
-            if (
-                !$oResponse->isSuccess()
-                && $this->fallbackFunc instanceof Closure
-            ) {
-                $oFallback = new Fallback();
-                $oFallback->setMessage($message);
-                $oFallback->setResponse($oResponse);
-
-
-                ($this->fallbackFunc)($oFallback);
-            }
+        $sUrl = null;
+        switch ($message::getMessageType()) {
+            case Monolog::getMessageType():
+                $sUrl = $this->sUrl.'monolog/'.$message->getLogUuid();
+                break;
         }
 
+        $oResponse = $this->sendRequest(
+            $sUrl,
+            [$message->extractData()]
+        );
+
+        if (
+            !$oResponse->isSuccess()
+            && $this->fallbackFunc instanceof Closure
+        ) {
+            $oFallback = new Fallback();
+            $oFallback->setMessages([$message]);
+            $oFallback->setResponse($oResponse);
+
+            ($this->fallbackFunc)($oFallback);
+        }
         return $oResponse;
     }
 
@@ -144,7 +126,116 @@ class HttpClient
             $oResponse->getStatusCode() >= 400
             && $oResponse->getStatusCode() < 600
         ) {
-            throw new BadResponseException('Response code is '.$oResponse->getStatusCode());
+            throw new BadResponseException('Response code is '.$oResponse->getStatusCode().'. Response body "'.$oResponse->getBody()['error'].'".');
         }
+    }
+
+    /**
+     * @param IMessage $message
+     */
+    public function addMessage(IMessage $message): void
+    {
+        $this->aMessages[$message::getMessageType()][$message->getLogUuid()][] = $message;
+    }
+
+    /**
+     *
+     */
+    public function destroyMessages(): void
+    {
+        $this->aMessages = [];
+    }
+
+    /**
+     * @return ResponseCollection
+     */
+    public function sendMessages(): ResponseCollection
+    {
+        $oBatchResponse = new ResponseCollection();
+
+        if (!empty($this->aMessages)) {
+            foreach ($this->aMessages as $sMessageType => $aLogs) {
+                foreach ($aLogs as $sLogUuid => $aMessages) {
+                    $sUrl = null;
+                    switch ($sMessageType) {
+                        case Monolog::getMessageType():
+                            $sUrl = $this->sUrl.'monolog/'.$sLogUuid;
+                            break;
+                    }
+
+                    array_walk($aMessages, function (IMessage &$message)
+                        {
+                            $message = $message->extractData();
+                        });
+
+                    $oResponse = $this->sendRequest(
+                        $sUrl,
+                        $aMessages
+                    );
+
+                    $oBatchResponse->addResponses($oResponse);
+
+                    if (!$oResponse->isSuccess()) {
+                        $oBatchResponse->setIsSuccess(false);
+
+                        if ($this->fallbackFunc instanceof Closure) {
+                            $oFallback = new Fallback();
+                            $oFallback->setMessages($this->aMessages[$sMessageType][$sLogUuid]);
+                            $oFallback->setResponse($oResponse);
+
+                            ($this->fallbackFunc)($oFallback);
+                        }
+                    }
+                }
+            }
+            $this->destroyMessages();
+        }
+
+        return $oBatchResponse;
+    }
+
+    /**
+     * @param $sUrl
+     * @param $aData
+     *
+     * @return Response
+     */
+    private function sendRequest($sUrl, $aContent)
+    {
+        $oResponse = new Response();
+
+        try {
+            $context = stream_context_create(
+                [
+                    'http' => [
+                        'method' => 'POST',
+                        'header' => [
+                            'Content-Type: application/json',
+                            'apiToken: '.$this->sUserToken
+                        ],
+                        'timeout' => $this->iHttpTimeout,
+                        'content' => json_encode($aContent, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                        'ignore_errors' => true
+                    ]
+                ]
+            );
+
+            $stream = fopen(
+                $sUrl,
+                'r',
+                false,
+                $context
+            );
+
+            $this->processResponse($stream, $oResponse);
+            $oResponse->setIsSuccess(true);
+
+            return $oResponse;
+        } catch (KibilogException $e) {
+            $oResponse->setIsSuccess(false);
+            $oResponse->setError($e->getMessage());
+        }
+
+        return $oResponse;
     }
 }

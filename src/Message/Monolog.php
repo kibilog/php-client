@@ -4,14 +4,15 @@ namespace Kibilog\SimpleClient\Message;
 
 class Monolog implements IMessage
 {
-    public const LEVEL_DEBUG = 'DEBUG';
-    public const LEVEL_INFO = 'INFO';
-    public const LEVEL_NOTICE = 'NOTICE';
-    public const LEVEL_WARNING = 'WARNING';
-    public const LEVEL_ERROR = 'ERROR';
-    public const LEVEL_CRITICAL = 'CRITICAL';
-    public const LEVEL_ALERT = 'ALERT';
-    public const LEVEL_EMERGENCY = 'EMERGENCY';
+
+    public const LEVEL_DEBUG = 10;
+    public const LEVEL_INFO = 20;
+    public const LEVEL_NOTICE = 30;
+    public const LEVEL_WARNING = 40;
+    public const LEVEL_ERROR = 50;
+    public const LEVEL_CRITICAL = 60;
+    public const LEVEL_ALERT = 70;
+    public const LEVEL_EMERGENCY = 80;
 
     /** @var string $__logUuid */
     private $__logUuid;
@@ -22,8 +23,8 @@ class Monolog implements IMessage
     /** @var string $message */
     private $message;
 
-    /** @var string $level */
-    private $level = 'INFO';
+    /** @var int $level */
+    private $level = 20;
 
     /** @var array $params */
     private $params;
@@ -34,18 +35,11 @@ class Monolog implements IMessage
     /**
      * @param string $sLogUuid
      */
-    public function __construct(string $sLogUuid)
+    public function __construct(string $sLogUuid, string $sMessage)
     {
         $this->__logUuid = $sLogUuid;
+        $this->message = $sMessage;
         $this->createdAt = time();
-    }
-
-    /**
-     * @return string
-     */
-    public function getLogUuid(): string
-    {
-        return $this->__logUuid;
     }
 
     /**
@@ -68,38 +62,27 @@ class Monolog implements IMessage
     }
 
     /**
-     * @return string|null
+     * @return string
      */
-    public function getMessage(): ?string
+    public function getMessage(): string
     {
         return $this->message;
     }
 
     /**
-     * @param string $message
-     *
-     * @return Monolog
+     * @return int
      */
-    public function setMessage(string $message): Monolog
-    {
-        $this->message = $message;
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getLevel(): string
+    public function getLevel(): int
     {
         return $this->level;
     }
 
     /**
-     * @param string $level
+     * @param int $level
      *
      * @return Monolog
      */
-    public function setLevel(string $level): Monolog
+    public function setLevel(int $level): Monolog
     {
         $this->level = $level;
         return $this;
@@ -144,6 +127,14 @@ class Monolog implements IMessage
     }
 
     /**
+     * @return string
+     */
+    public function getLogUuid(): string
+    {
+        return $this->__logUuid;
+    }
+
+    /**
      * @return array
      */
     public function extractData(): array
@@ -155,5 +146,13 @@ class Monolog implements IMessage
             'params' => $this->params,
             'group' => $this->group
         ];
+    }
+
+    /**
+     * @return string
+     */
+    public static function getMessageType(): string
+    {
+        return 'monolog';
     }
 }
