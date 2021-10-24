@@ -8,7 +8,7 @@
     "monolog"
   ],
   "homepage": "https://kibilog.com",
-  "type": "library",
+  "license": "MIT",
   "autoload": {
     "psr-4": {
       "Kibilog\\SimpleClient\\": "src/"
@@ -21,6 +21,9 @@
       "homepage": "https://kibilog.com"
     }
   ],
+  "support": {
+    "email": "info@kibilog.com"
+  },
   "require": {
     "php": ">=7.1"
   },
