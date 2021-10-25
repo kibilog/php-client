@@ -2,12 +2,13 @@
 
 namespace Kibilog\SimpleClient;
 
-use Closure;
 use Exception;
 use Kibilog\SimpleClient\Exception\BadResponseException;
 use Kibilog\SimpleClient\Exception\KibilogException;
 use Kibilog\SimpleClient\Exception\StreamException;
 use Kibilog\SimpleClient\Exception\TimeoutException;
+use Kibilog\SimpleClient\Fallback\Adapter\IAdapter;
+use Kibilog\SimpleClient\Fallback\FallbackMessage;
 use Kibilog\SimpleClient\Message\IMessage;
 use Kibilog\SimpleClient\Message\Monolog;
 use Kibilog\SimpleClient\Response\Response;
@@ -22,8 +23,8 @@ class HttpClient
     private $sUserToken;
     /** @var int $iHttpTimeout */
     private $iHttpTimeout = 2;
-    /** @var Closure $fallbackFunc */
-    private $fallbackFunc;
+    /** @var IAdapter $fallbackAdapter */
+    private $fallbackAdapter;
     /** @var array $aMessages */
     private $aMessages = [];
 
@@ -53,11 +54,11 @@ class HttpClient
     }
 
     /**
-     * @param Closure $closure
+     * @param IAdapter $adapter
      */
-    public function setFallback(Closure $closure): void
+    public function setFallback(IAdapter $adapter): void
     {
-        $this->fallbackFunc = $closure;
+        $this->fallbackAdapter = $adapter;
     }
 
     /**
@@ -81,13 +82,13 @@ class HttpClient
 
         if (
             !$oResponse->isSuccess()
-            && $this->fallbackFunc instanceof Closure
+            && $this->fallbackAdapter instanceof IAdapter
         ) {
-            $oFallback = new Fallback();
+            $oFallback = new FallbackMessage();
             $oFallback->setMessages([$message]);
             $oFallback->setResponse($oResponse);
 
-            ($this->fallbackFunc)($oFallback);
+            ($this->fallbackAdapter)->save($oFallback);
         }
         return $oResponse;
     }
@@ -178,12 +179,12 @@ class HttpClient
                     if (!$oResponse->isSuccess()) {
                         $oBatchResponse->setIsSuccess(false);
 
-                        if ($this->fallbackFunc instanceof Closure) {
-                            $oFallback = new Fallback();
+                        if ($this->fallbackAdapter instanceof IAdapter) {
+                            $oFallback = new FallbackMessage();
                             $oFallback->setMessages($this->aMessages[$sMessageType][$sLogUuid]);
                             $oFallback->setResponse($oResponse);
 
-                            ($this->fallbackFunc)($oFallback);
+                            ($this->fallbackAdapter)->save($oFallback);
                         }
                     }
                 }

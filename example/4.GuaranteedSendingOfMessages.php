@@ -3,7 +3,7 @@
 $_SERVER['DOCUMENT_ROOT'] = dirname(__DIR__);
 require $_SERVER['DOCUMENT_ROOT'].'/vendor/autoload.php';
 
-use Kibilog\SimpleClient\Fallback;
+use Kibilog\SimpleClient\Fallback\Adapter\FilesystemAdapter;
 use Kibilog\SimpleClient\HttpClient;
 use Kibilog\SimpleClient\Message\Monolog;
 
@@ -18,11 +18,11 @@ $oClient = new HttpClient($sUserToken);
  * We recommend using this together with our fallback handler.
  */
 
-
-$oClient->setFallback(function (Fallback $fallback)
-    {
-        // ...
-    });
+$oClient->setFallback(
+    new FilesystemAdapter(
+        dirname($_SERVER['DOCUMENT_ROOT']).'/kibilogFallback'
+    )
+);
 
 register_shutdown_function(function () use ($oClient)
     {

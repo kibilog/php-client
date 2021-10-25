@@ -1,10 +1,10 @@
 <?php
 
-namespace Kibilog\SimpleClient;
+namespace Kibilog\SimpleClient\Fallback;
 
 use Kibilog\SimpleClient\Response\Response;
 
-class Fallback
+class FallbackMessage
 {
     /** @var Response $response */
     private $response;
